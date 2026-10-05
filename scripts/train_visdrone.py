@@ -61,6 +61,8 @@ def main():
     ap.add_argument("--batch", type=int, default=0, help="0 = auto from GPU")
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--resume", action="store_true")
+    ap.add_argument("--val-only", action="store_true",
+                    help="skip training; just re-validate best.pt and rewrite metrics")
     ap.add_argument("--export-to", default="models",
                     help="dir to copy best.pt into as visdrone_base.pt")
     args = ap.parse_args()
@@ -72,7 +74,15 @@ def main():
     run_dir = Path(args.project) / args.name
     last = run_dir / "weights" / "last.pt"
 
-    if args.resume:
+    if args.val_only:
+        if not (run_dir / "weights" / "best.pt").exists():
+            raise SystemExit(f"--val-only given but {run_dir / 'weights' / 'best.pt'} not found")
+        print(f"[val-only] skipping training, re-validating {run_dir / 'weights' / 'best.pt'}")
+
+        class _R:  # stand-in so the shared code below finds the run directory
+            save_dir = run_dir
+        results = _R()
+    elif args.resume:
         if not last.exists():
             raise SystemExit(f"--resume given but {last} not found")
         print(f"[resume] {last}")
@@ -129,6 +139,11 @@ def main():
         project=args.project, name=f"{args.name}_val", exist_ok=True, plots=True,
     )
     box = metrics.box
+    # Ultralytics builds box.maps as `np.zeros(nc) + self.map`, so any class with
+    # no instances in the val split is silently filled with the OVERALL mAP.
+    # Reporting that verbatim would claim an 'animal' score the data cannot
+    # support. Only classes in ap_class_index actually have measured values.
+    present = {int(c) for c in box.ap_class_index}
     summary = {
         "weights": str(best),
         "imgsz": imgsz,
@@ -139,8 +154,12 @@ def main():
         "precision": round(float(box.mp), 4),
         "recall": round(float(box.mr), 4),
         "per_class_mAP50-95": {
-            metrics.names[c]: round(float(box.maps[c]), 4) for c in range(len(box.maps))
+            metrics.names[c]: (round(float(box.maps[c]), 4) if c in present else None)
+            for c in range(len(box.maps))
         },
+        "classes_with_no_val_instances": [
+            metrics.names[c] for c in range(len(box.maps)) if c not in present
+        ],
     }
     print(json.dumps(summary, indent=2))
 
