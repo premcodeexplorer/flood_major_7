@@ -159,7 +159,12 @@ JSONs and figures — the `.pt` is gitignored.
 The full training curve (`runs/visdrone_base/results.csv` / `results.png`) of
 the real run was overwritten: cell 8 was re-run after training finished, which started
 a fresh run in the same folder and overwrote it (and `best.pt` / `last.pt`) at
-epoch 8. The exported `models/visdrone_base.pt` was unaffected. The notebook now
+epoch 8. The exported `models/visdrone_base.pt` was unaffected. Use
+`outputs/phase1/figures/training_curve.png` instead - rebuilt from the
+every-5-epoch checkpoints (metrics in `training_curve_from_checkpoints.csv`).
+It has 8 points instead of 35 but shows the same trend: mAP still creeping up
+at epoch 35 (+0.002 mAP@50-95 over the last 4 epochs), i.e. converged, no
+overfitting (validation losses fall monotonically). The notebook now
 refuses to re-run cell 8 once that file exists; use **8c** to regenerate metrics.
 
 ## If Colab disconnects
