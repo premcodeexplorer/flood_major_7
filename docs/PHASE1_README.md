@@ -59,10 +59,45 @@ boxes under 2 px on either side after clamping are dropped.
 | vehicle mAP@50 | 0.50 – 0.62 |
 | animal | 0.0 (correct — no instances) |
 
-Published VisDrone numbers look lower than these because they are over 10
-fine-grained classes; merging 8 vehicle types into one class legitimately raises
-mAP. Do not compare our number against theirs in the report — compare only
-against our own Phase-2 fine-tuned model.
+### Context for the report
+
+| reference point | mAP@50 | task |
+|---|---|---|
+| YOLOv8s baseline, published | 0.25 - 0.30 | VisDrone, **10 fine-grained classes** |
+| Specialized 2024 methods | 0.40 - 0.50 | VisDrone, **10 fine-grained classes** |
+| **Ours (Phase 1)** | **0.42 - 0.52** | VisDrone, **2 merged classes** |
+
+Ours looks higher mainly because merging 8 vehicle types into one `vehicle`
+class removes the hardest sub-problem (van vs. truck vs. bus). That is a
+legitimate simplification for rescue, but it makes the tasks non-comparable:
+**do not put our number next to published VisDrone results in the report.**
+The only valid comparison is against our own Phase-2 fine-tuned model, measured
+on the same flood test split.
+
+### Why the number is capped low (for the viva)
+
+1. **Tiny objects** - a pedestrian at drone altitude is 20-40 px tall; see the
+   COCO small-object percentage in the conversion stats.
+2. **Extreme density** - 300+ heavily-occluding objects in some frames, plus
+   night, motion blur, and 10-100 m altitude variation.
+3. **mAP@50-95 is structurally unfair to small boxes** - a 3 px error shifts IoU
+   by ~0.15 on a 20 px box but is noise on a 200 px box. A metric property, not
+   a model failure.
+
+Note for the presentation: mAP weights precision and recall equally, but in
+rescue a **missed victim costs a life while a false positive costs a wasted
+glance**. mAP therefore understates the system's usefulness at the low
+confidence threshold we deliberately adopt in Phase 8.
+
+### What raises the number that actually matters
+
+| Phase | Attacks |
+|---|---|
+| 2 - flood fine-tune | Domain gap: dry city streets -> water, rooftops, debris |
+| 3 - SAHI | Small objects head-on; slicing makes a 25 px victim look like 150 px |
+| 4 - tracking | Temporal recall: a victim missed in frame 37 is still tracked from 36 |
+
+Phase 1 is the floor, not the ceiling.
 
 ## Deliverables → where they go
 
