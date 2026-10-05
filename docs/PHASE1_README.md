@@ -9,11 +9,21 @@ Colab VM itself, so nothing needs uploading except the notebook.
 `Runtime > Change runtime type > GPU` before you start. The notebook adapts
 `imgsz`/`batch` to whichever GPU you get.
 
-| GPU | imgsz | batch | ~time/epoch | 60 epochs |
-|---|---|---|---|---|
-| A100 | 1280 | 16 | ~1 min | ~1 h |
-| L4 | 1024 | 10 | ~2.5 min | ~2.5 h |
-| T4 | 1024 | 8 | ~4 min | ~4 h |
+| GPU | imgsz | batch | ~time/epoch | recommended epochs | total |
+|---|---|---|---|---|---|
+| A100 | 1280 | 16 | ~1.5 min | 60 | ~1.5 h |
+| L4 | 1024 | 10 | ~4 min | 50 | ~3.5 h |
+| T4 | 960 | 12 | ~6 min | **35** | **~3.5 h** |
+
+Times are rough - treat them as order-of-magnitude, not promises. `patience`
+usually triggers early stopping before the epoch cap is reached.
+
+**On a T4, pass `--epochs 35`.** The default 60 would run ~8-10 h at full
+resolution and will not survive one free Colab session. 35 epochs from
+COCO-pretrained weights is ample for a *base* model that Phase 2 fine-tunes
+anyway - over-optimizing Stage 1 is wasted GPU time. Resolution is the lever
+that matters for tiny aerial objects, so trade epochs for `imgsz`, never the
+reverse.
 
 ## Source of truth
 
