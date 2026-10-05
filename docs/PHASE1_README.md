@@ -59,15 +59,30 @@ Dropped during conversion: category `0` (ignored regions), category `11`
 (others), and any box with `score == 0`. Boxes overflowing the frame are clamped;
 boxes under 2 px on either side after clamping are dropped.
 
-## Expected results (`yolov8s`, imgsz 1024–1280)
+## Expected results (`yolov8s`)
 
-| metric | expect |
-|---|---|
-| mAP@50 | 0.42 – 0.52 |
-| mAP@50-95 | 0.24 – 0.31 |
-| person mAP@50 | 0.35 – 0.45 |
-| vehicle mAP@50 | 0.50 – 0.62 |
-| animal | 0.0 (correct — no instances) |
+Revised against the actual T4 run (imgsz 960, batch 12, 35 epochs). The first
+estimates here were anchored to published 10-class VisDrone results and were
+~0.15 mAP@50 too low: collapsing 8 vehicle types into one `vehicle` class
+removes most of the classification difficulty, and COCO's pretrained `person`
+head row is carried over by name.
+
+| metric | observed @ epoch 2 | projected final |
+|---|---|---|
+| mAP@50 | 0.594 | **0.62 - 0.68** |
+| mAP@50-95 | 0.315 | **0.35 - 0.39** |
+| precision | 0.717 | ~0.75 |
+| recall | 0.530 | ~0.60 |
+| animal | `null` - no instances in VisDrone, not evaluated ||
+
+Measured throughput: **~4.2 min/epoch** (540 iters at ~2.2 it/s, plus ~35 s
+validation), so 35 epochs is roughly **2.5 h** on a T4 - faster than the 3.5 h
+estimated above.
+
+Note the precision/recall asymmetry (P > R): the detector is conservative and
+misses more than it over-calls. That is the wrong direction for rescue, where a
+missed victim costs far more than a false alarm. Addressed in Phase 3 (SAHI) and
+by threshold selection in Phase 8, not here.
 
 ### Context for the report
 
