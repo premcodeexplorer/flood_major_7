@@ -59,9 +59,29 @@ Dropped during conversion: category `0` (ignored regions), category `11`
 (others), and any box with `score == 0`. Boxes overflowing the frame are clamped;
 boxes under 2 px on either side after clamping are dropped.
 
-## Expected results (`yolov8s`)
+## Results (`yolov8s`)
 
-Revised against the actual T4 run (imgsz 960, batch 12, 35 epochs). The first
+Final, from `models/phase1_visdrone_metrics.json` (T4, imgsz 960, batch 12,
+35 epochs, VisDrone val, 548 images / 38,759 boxes):
+
+| metric | value |
+|---|---|
+| mAP@50 | **0.699** |
+| mAP@50-95 | **0.396** |
+| mAP@75 | 0.377 |
+| precision | 0.794 |
+| recall | 0.630 |
+| person mAP@50-95 | 0.261 |
+| vehicle mAP@50-95 | 0.531 |
+| animal | `null` - no instances in VisDrone, not evaluated |
+
+Person scores half of vehicle: pedestrians are the smallest, most occluded
+targets in the set - exactly the class the rescue system cares about, and the
+gap Phases 2-4 have to close.
+
+### How the projections compared
+
+The first
 estimates here were anchored to published 10-class VisDrone results and were
 ~0.15 mAP@50 too low: collapsing 8 vehicle types into one `vehicle` class
 removes most of the classification difficulty, and COCO's pretrained `person`
@@ -90,7 +110,7 @@ by threshold selection in Phase 8, not here.
 |---|---|---|
 | YOLOv8s baseline, published | 0.25 - 0.30 | VisDrone, **10 fine-grained classes** |
 | Specialized 2024 methods | 0.40 - 0.50 | VisDrone, **10 fine-grained classes** |
-| **Ours (Phase 1)** | **0.42 - 0.52** | VisDrone, **2 merged classes** |
+| **Ours (Phase 1)** | **0.699** | VisDrone, **2 merged classes** |
 
 Ours looks higher mainly because merging 8 vehicle types into one `vehicle`
 class removes the hardest sub-problem (van vs. truck vs. bus). That is a
@@ -131,10 +151,16 @@ Phase 1 is the floor, not the ceiling.
 | Base weights | `models/visdrone_base.pt` | **Phase 2** (fine-tune starting point) |
 | Baseline metrics | `models/phase1_visdrone_metrics.json` | **Phase 9** ("fine-tuning helps" comparison) |
 | Conversion stats | `outputs/phase1/visdrone_conversion_stats.json` | **Phase 3** (COCO small-object % justifies SAHI) |
-| Curves / confusion matrix | `outputs/phase1/runs/` | Report figures |
+| PR curves / confusion matrix | `outputs/phase1/figures/` | Report figures |
 
-Download all four from Drive at the end of the notebook (cell 11) and commit the
-two JSONs — the `.pt` is gitignored.
+Download them from Drive at the end of the notebook (cell 11) and commit the
+JSONs and figures — the `.pt` is gitignored.
+
+The full training curve (`runs/visdrone_base/results.csv` / `results.png`) of
+the real run was overwritten: cell 8 was re-run after training finished, which started
+a fresh run in the same folder and overwrote it (and `best.pt` / `last.pt`) at
+epoch 8. The exported `models/visdrone_base.pt` was unaffected. The notebook now
+refuses to re-run cell 8 once that file exists; use **8c** to regenerate metrics.
 
 ## If Colab disconnects
 

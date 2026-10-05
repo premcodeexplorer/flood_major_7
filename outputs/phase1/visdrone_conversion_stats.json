@@ -1,0 +1,32 @@
+{
+  "train": {
+    "images": 6471,
+    "images_with_no_objects": 0,
+    "boxes_kept": 343197,
+    "skipped_ignored_region": 10345,
+    "skipped_other_class": 0,
+    "skipped_degenerate": 8,
+    "per_class": {
+      "vehicle": 236804,
+      "person": 106393
+    },
+    "small_boxes_coco": 207517,
+    "medium_boxes_coco": 116696,
+    "large_boxes_coco": 18984
+  },
+  "val": {
+    "images": 548,
+    "images_with_no_objects": 0,
+    "boxes_kept": 38759,
+    "skipped_ignored_region": 1410,
+    "skipped_other_class": 0,
+    "skipped_degenerate": 0,
+    "per_class": {
+      "vehicle": 24790,
+      "person": 13969
+    },
+    "small_boxes_coco": 26575,
+    "medium_boxes_coco": 11116,
+    "large_boxes_coco": 1068
+  }
+}

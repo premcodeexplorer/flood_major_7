@@ -1,0 +1,18 @@
+{
+  "weights": "/content/drive/MyDrive/FloodRescue/models/visdrone_base.pt",
+  "imgsz": 960,
+  "batch": 12,
+  "mAP50-95": 0.3956,
+  "mAP50": 0.6991,
+  "mAP75": 0.3765,
+  "precision": 0.7942,
+  "recall": 0.63,
+  "per_class_mAP50-95": {
+    "person": 0.2605,
+    "vehicle": 0.5307,
+    "animal": null
+  },
+  "classes_with_no_val_instances": [
+    "animal"
+  ]
+}

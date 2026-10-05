@@ -27,8 +27,13 @@ md("""# Phase 1 - Model 1 Base Training on VisDrone (YOLOv8)
 
 **Flood Victim Detection & Dynamic Rescue Priority Mapping**
 
-Run every cell top to bottom. Expected total time: **~1.5 h on A100**, **~3.5 h on T4**.
+Run every cell top to bottom **once**. Expected total time: **~1.5 h on A100**, **~2.5 h on T4**.
 Cell 8 asks you to set `EPOCHS` for your GPU - that is the only knob you touch.
+
+**Coming back to a finished run** (new notebook version, reconnect, want the numbers
+again)? Run cells 1-7 only, then **8c**. Never re-run cell 8 once training has
+finished - it starts a fresh training and overwrites `best.pt`, `last.pt` and
+`results.csv` in the run folder.
 
 Before you start: `Runtime > Change runtime type > GPU` (pick the best GPU you have access to).
 
@@ -138,16 +143,26 @@ every 5 epochs, and `patience` stops early once mAP plateaus.
 |---|---|---|---|
 | A100 | 60 | 15 | ~1.5 h |
 | L4 | 50 | 12 | ~3.5 h |
-| **T4** | **35** | **10** | **~3.5 h** |
+| **T4** | **35** | **10** | **~2.5 h** |
 
 On a T4, 60 epochs would run 8-10 h and will not survive one free Colab session.
 35 epochs from COCO-pretrained weights is ample for a *base* model that Phase 2
 fine-tunes anyway - over-optimizing Stage 1 is wasted GPU time.
 
 Leave this tab open and the browser awake: a free Colab session is reclaimed
-after roughly 90 minutes of no interaction."""),
+after roughly 90 minutes of no interaction.
+
+> **Run this cell exactly once.** Re-running it after training has finished trains
+> again **from scratch** into the same folder, overwriting `best.pt`, `last.pt` and
+> `results.csv`. Disconnected mid-training -> **8b**. Training already done -> **8c**."""),
 code("""EPOCHS   = 35   # T4: 35  |  L4: 50  |  A100: 60
 PATIENCE = 10   # T4: 10  |  L4: 12  |  A100: 15
+
+# Refuse to overwrite a finished run. Delete models/visdrone_base.pt on Drive
+# yourself if you really want to retrain from zero.
+if os.path.exists(f'{MODELS}/visdrone_base.pt'):
+    raise SystemExit('Training already finished (models/visdrone_base.pt exists). '
+                     'Use 8b to resume a disconnect or 8c to regenerate metrics.')
 
 !python /content/train_visdrone.py \\
     --data {DATA}/visdrone.yaml \\
@@ -169,6 +184,20 @@ code("""!python /content/train_visdrone.py \\
     --resume \\
     --export-to {MODELS}"""),
 
+md("""### 8c. Training already finished - regenerate metrics only (no training)
+
+Re-validates the exported model `models/visdrone_base.pt` and rewrites
+`phase1_visdrone_metrics.json`. Use this after updating the notebook. Takes ~1 min.
+It validates the exported file, not `runs/.../best.pt`, so it is safe even if the
+run folder was overwritten."""),
+code("""!python /content/train_visdrone.py \\
+    --data {DATA}/visdrone.yaml \\
+    --project {RUNS} \\
+    --name visdrone_base \\
+    --val-only \\
+    --weights {MODELS}/visdrone_base.pt \\
+    --export-to {MODELS}"""),
+
 md("## 9. Results - the numbers for your report"),
 code("""import json
 from IPython.display import Image as IPImage, display
@@ -176,28 +205,33 @@ from IPython.display import Image as IPImage, display
 m = json.load(open(f'{MODELS}/phase1_visdrone_metrics.json'))
 print(json.dumps(m, indent=2))
 
-for png in ['results.png', 'confusion_matrix_normalized.png', 'PR_curve.png',
-            'val_batch0_pred.jpg']:
-    p = f'{RUNS}/visdrone_base/{png}'
+# results.png is the training curve; the rest come from the final validation run
+for png in ['visdrone_base/results.png',
+            'visdrone_base_val/confusion_matrix_normalized.png',
+            'visdrone_base_val/BoxPR_curve.png',
+            'visdrone_base_val/val_batch0_pred.jpg']:
+    p = f'{RUNS}/{png}'
     if os.path.exists(p):
         print('\\n' + png)
         display(IPImage(p, width=900))"""),
 
-md("""### Sanity targets for `yolov8s` on VisDrone (2 merged classes)
+md("""### Reference result for `yolov8s` on VisDrone (2 merged classes)
 
-| metric | A100 @1280, 60ep | **T4 @960, 35ep** |
-|---|---|---|
-| mAP@50 | 0.46 - 0.52 | **0.40 - 0.48** |
-| mAP@50-95 | 0.27 - 0.31 | **0.23 - 0.28** |
-| person mAP@50 | 0.38 - 0.45 | 0.32 - 0.40 |
-| vehicle mAP@50 | 0.54 - 0.62 | 0.48 - 0.57 |
+Measured on the real T4 run (imgsz 960, batch 12, 35 epochs):
 
-The T4 column is 2-4 points lower - that is the cost of 960 px and 35 epochs,
-and it is the right trade. Phase 2 fine-tuning and Phase 3 SAHI both move the
-number far more than those points would.
+| metric | T4 @960, 35ep |
+|---|---|
+| mAP@50 | **0.699** |
+| mAP@50-95 | **0.396** |
+| precision / recall | 0.794 / 0.630 |
+| person mAP@50-95 | 0.261 |
+| vehicle mAP@50-95 | 0.531 |
 
-`animal` will read **0.0** - correct, VisDrone has no animal instances. Landing
-well below this range means something went wrong in conversion, not in training."""),
+An A100 at 1280 px should land a few points higher. Landing far below this
+(e.g. mAP@50 < 0.55) means something went wrong in conversion, not training.
+
+`animal` reads **null** and is listed under `classes_with_no_val_instances` -
+correct, VisDrone has no animal instances, so there is nothing to score."""),
 
 md("## 10. Inference spot-check on val images"),
 code("""from ultralytics import YOLO
@@ -227,7 +261,8 @@ md("""---
 - [ ] `models/phase1_visdrone_metrics.json` - the VisDrone-only baseline mAP
       (**Phase 9 compares the fine-tuned model against this**)
 - [ ] `outputs/phase1/visdrone_conversion_stats.json` - class counts + COCO small/medium/large split
-- [ ] `runs/visdrone_base/` - results.png, PR_curve.png, confusion_matrix_normalized.png
+- [ ] `runs/visdrone_base/results.png` - training curve
+- [ ] `runs/visdrone_base_val/` - BoxPR_curve.png, confusion_matrix_normalized.png
 
 Next: **Phase 2** - fine-tune this on the Roboflow flood dataset at a lower LR."""),
 ]

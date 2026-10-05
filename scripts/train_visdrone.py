@@ -62,7 +62,9 @@ def main():
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--resume", action="store_true")
     ap.add_argument("--val-only", action="store_true",
-                    help="skip training; just re-validate best.pt and rewrite metrics")
+                    help="skip training; just re-validate weights and rewrite metrics")
+    ap.add_argument("--weights", default=None,
+                    help="with --val-only: weights to validate (default <run>/weights/best.pt)")
     ap.add_argument("--export-to", default="models",
                     help="dir to copy best.pt into as visdrone_base.pt")
     args = ap.parse_args()
@@ -74,10 +76,12 @@ def main():
     run_dir = Path(args.project) / args.name
     last = run_dir / "weights" / "last.pt"
 
+    best = None
     if args.val_only:
-        if not (run_dir / "weights" / "best.pt").exists():
-            raise SystemExit(f"--val-only given but {run_dir / 'weights' / 'best.pt'} not found")
-        print(f"[val-only] skipping training, re-validating {run_dir / 'weights' / 'best.pt'}")
+        best = Path(args.weights) if args.weights else run_dir / "weights" / "best.pt"
+        if not best.exists():
+            raise SystemExit(f"--val-only given but {best} not found")
+        print(f"[val-only] skipping training, re-validating {best}")
 
         class _R:  # stand-in so the shared code below finds the run directory
             save_dir = run_dir
@@ -129,8 +133,9 @@ def main():
         )
 
     save_dir = Path(results.save_dir if hasattr(results, "save_dir") else run_dir)
-    best = save_dir / "weights" / "best.pt"
-    print(f"[train] done -> {best}")
+    if best is None:
+        best = save_dir / "weights" / "best.pt"
+        print(f"[train] done -> {best}")
 
     # ---- final validation at the trained resolution -------------------------
     print("[val] running final validation on the VisDrone val split")
@@ -170,7 +175,9 @@ def main():
     if args.export_to:
         dest_dir = Path(args.export_to)
         dest_dir.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(best, dest_dir / "visdrone_base.pt")
+        dest = dest_dir / "visdrone_base.pt"
+        if not (dest.exists() and dest.samefile(best)):
+            shutil.copy2(best, dest)
         shutil.copy2(out, dest_dir / "phase1_visdrone_metrics.json")
         print(f"[export] {dest_dir / 'visdrone_base.pt'}  <-- feed this to Phase 2")
 
