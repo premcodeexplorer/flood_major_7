@@ -1,0 +1,20 @@
+# datasets and weights are large / regenerable - never commit
+data/**
+!data/.gitkeep
+datasets/
+models/*.pt
+models/*.pth
+runs/
+outputs/**/*.mp4
+outputs/**/*.avi
+*.zip
+
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+.env
+
+.DS_Store
+Thumbs.db

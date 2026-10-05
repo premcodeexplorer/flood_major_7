@@ -1,0 +1,27 @@
+# Flood Victim Detection & Dynamic Rescue Priority Mapping
+# Local (RTX 4090) environment. Install torch matching your CUDA first:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+
+# --- Phase 1-3: Model 1 (detection) ---
+ultralytics>=8.3.0
+sahi>=0.11.20
+
+# --- Phase 4-5: tracking + memory ---
+lap>=0.4.0                 # ByteTrack association (Ultralytics bundles the tracker)
+filterpy>=1.4.5
+
+# --- Phase 6: Model 2 (segmentation) ---
+segmentation-models-pytorch>=0.3.3
+albumentations>=1.4.0
+
+# --- Phases 7-9: fusion, output, evaluation ---
+opencv-python>=4.9.0
+numpy>=1.26.0
+scipy>=1.12.0
+scikit-learn>=1.4.0        # DBSCAN clustering for rescue units
+pandas>=2.2.0
+matplotlib>=3.8.0
+seaborn>=0.13.0
+pillow>=10.2.0
+pyyaml>=6.0
+tqdm>=4.66.0
