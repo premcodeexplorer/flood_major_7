@@ -55,6 +55,8 @@ def main():
                     help="put this on Google Drive so checkpoints survive a disconnect")
     ap.add_argument("--name", default="visdrone_base")
     ap.add_argument("--epochs", type=int, default=60)
+    ap.add_argument("--patience", type=int, default=15,
+                    help="epochs without mAP improvement before early stop")
     ap.add_argument("--imgsz", type=int, default=0, help="0 = auto from GPU")
     ap.add_argument("--batch", type=int, default=0, help="0 = auto from GPU")
     ap.add_argument("--workers", type=int, default=8)
@@ -96,7 +98,7 @@ def main():
             momentum=0.937,
             weight_decay=0.0005,
             warmup_epochs=3.0,
-            patience=15,
+            patience=args.patience,
             # --- augmentation: biased toward small, dense aerial targets ---
             mosaic=1.0,
             close_mosaic=10,      # last 10 epochs clean, so val-time stats match

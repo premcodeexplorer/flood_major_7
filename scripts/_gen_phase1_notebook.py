@@ -27,7 +27,8 @@ md("""# Phase 1 - Model 1 Base Training on VisDrone (YOLOv8)
 
 **Flood Victim Detection & Dynamic Rescue Priority Mapping**
 
-Run every cell top to bottom. Expected total time: **~1 h on A100**, **~3-4 h on T4**.
+Run every cell top to bottom. Expected total time: **~1.5 h on A100**, **~3.5 h on T4**.
+Cell 8 asks you to set `EPOCHS` for your GPU - that is the only knob you touch.
 
 Before you start: `Runtime > Change runtime type > GPU` (pick the best GPU you have access to).
 
@@ -128,16 +129,33 @@ code("%%writefile /content/train_visdrone.py\n" + train),
 md("""## 8. Train
 
 `imgsz` and `batch` are picked automatically from whichever GPU Colab handed you
-(1280 on A100/H100, 1024 on T4/L4/V100). A checkpoint is written to Drive every
-5 epochs, and `patience=15` stops early once mAP plateaus.
+(1280 on A100, 1024 on L4/V100, 960 on T4). A checkpoint is written to Drive
+every 5 epochs, and `patience` stops early once mAP plateaus.
 
-Leave this tab open and the browser awake."""),
-code("""!python /content/train_visdrone.py \\
+**Set `EPOCHS` below to match your GPU** - cell 1 told you which one you got:
+
+| GPU | EPOCHS | PATIENCE | ~total |
+|---|---|---|---|
+| A100 | 60 | 15 | ~1.5 h |
+| L4 | 50 | 12 | ~3.5 h |
+| **T4** | **35** | **10** | **~3.5 h** |
+
+On a T4, 60 epochs would run 8-10 h and will not survive one free Colab session.
+35 epochs from COCO-pretrained weights is ample for a *base* model that Phase 2
+fine-tunes anyway - over-optimizing Stage 1 is wasted GPU time.
+
+Leave this tab open and the browser awake: a free Colab session is reclaimed
+after roughly 90 minutes of no interaction."""),
+code("""EPOCHS   = 35   # T4: 35  |  L4: 50  |  A100: 60
+PATIENCE = 10   # T4: 10  |  L4: 12  |  A100: 15
+
+!python /content/train_visdrone.py \\
     --data {DATA}/visdrone.yaml \\
     --model yolov8s.pt \\
     --project {RUNS} \\
     --name visdrone_base \\
-    --epochs 60 \\
+    --epochs {EPOCHS} \\
+    --patience {PATIENCE} \\
     --export-to {MODELS}"""),
 
 md("""### 8b. If Colab disconnected - resume
@@ -165,14 +183,18 @@ for png in ['results.png', 'confusion_matrix_normalized.png', 'PR_curve.png',
         print('\\n' + png)
         display(IPImage(p, width=900))"""),
 
-md("""### Sanity targets for `yolov8s` on VisDrone (merged classes, imgsz 1024-1280)
+md("""### Sanity targets for `yolov8s` on VisDrone (2 merged classes)
 
-| metric | expect |
-|---|---|
-| mAP@50 | **0.42 - 0.52** |
-| mAP@50-95 | **0.24 - 0.31** |
-| person mAP@50 | 0.35 - 0.45 |
-| vehicle mAP@50 | 0.50 - 0.62 |
+| metric | A100 @1280, 60ep | **T4 @960, 35ep** |
+|---|---|---|
+| mAP@50 | 0.46 - 0.52 | **0.40 - 0.48** |
+| mAP@50-95 | 0.27 - 0.31 | **0.23 - 0.28** |
+| person mAP@50 | 0.38 - 0.45 | 0.32 - 0.40 |
+| vehicle mAP@50 | 0.54 - 0.62 | 0.48 - 0.57 |
+
+The T4 column is 2-4 points lower - that is the cost of 960 px and 35 epochs,
+and it is the right trade. Phase 2 fine-tuning and Phase 3 SAHI both move the
+number far more than those points would.
 
 `animal` will read **0.0** - correct, VisDrone has no animal instances. Landing
 well below this range means something went wrong in conversion, not in training."""),
