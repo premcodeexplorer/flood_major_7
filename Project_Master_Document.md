@@ -43,7 +43,7 @@ The system does not just detect — it goes from **perception all the way to a p
 - No existing flood-detection work combines detection + tracking + memory + flood-severity + prioritization. This integration is a genuine gap.
 
 **Feasibility:**
-- Built on proven, well-documented tools (YOLO, SAHI, ByteTrack, U-Net) and available datasets (VisDrone, Roboflow flood, FloodNet) — so it is buildable within a student project.
+- Built on proven, well-documented tools (YOLO, SAHI, ByteTrack, U-Net) and available datasets (VisDrone, Flood C2A, FloodNet) — so it is buildable within a student project.
 
 ---
 
@@ -116,7 +116,7 @@ Drone Flood Footage
 - **Type:** YOLOv8 (object detection)
 - **Job:** detect and locate people, vehicles, animals → bounding boxes with class labels
 - **Special technique:** SAHI (Slicing-Aided Hyper Inference) for tiny, far, occluded victims
-- **Trained on:** VisDrone (base) → fine-tuned on Roboflow flood dataset
+- **Trained on:** VisDrone (base) → fine-tuned on Flood C2A (aerial flood scenes, from the C2A dataset [3])
 - **Output:** boxes + classes + confidence per frame
 
 ### MODEL 2 — Flood Severity
@@ -147,9 +147,9 @@ STAGE 1 — Base training on VisDrone
   - Train YOLOv8 → model learns general overhead object appearance
   - Output: base detector weights
 
-STAGE 2 — Fine-tuning on flood data (Roboflow)
-  - Dataset: Roboflow flood set (Person-Flood / Rooftop / Boat, animals, vehicles)
-  - Convert to YOLO format; align/remap classes (person, vehicle, animal)
+STAGE 2 — Fine-tuning on flood data (Flood C2A)
+  - Dataset: Flood C2A — flood subset of C2A [3] (aerial flood scenes, people labelled)
+  - Convert to YOLO format; all labels -> person; vehicles pseudo-labelled by the Stage-1 model
   - Continue training (fine-tune) the base detector on flood images
   - Output: flood-adapted detector weights
 
@@ -281,7 +281,7 @@ No paired flood datasets with thermal/sensors/GIS exist for training — so we u
 | Dataset | Role in project | Used for | Notes |
 |---|---|---|---|
 | **VisDrone** | Base training (Model 1) | General aerial detection of people/vehicles | Direct download (GoogleDrive mirror); urban, aerial |
-| **Roboflow flood set** | Fine-tuning (Model 1) | Adapt to flood victims (rooftop/boat/water, animals, vehicles) | Detection-ready (YOLO export); verify it is aerial + enough images |
+| **Flood C2A** (flood subset of C2A [3], via Roboflow) | Fine-tuning (Model 1) | Adapt to flood scenes (water, rooftops, debris) | Aerial; 2,079 scenes with composited people + 109 real disaster photos as test. Person only — no animal labels (stated as a limitation) |
 | **FloodNet** | Training (Model 2) | Flood-water severity segmentation | High-res post-flood UAV imagery; prepare water masks |
 
 **Honest note:** There is no single public "flood video with labeled stranded people" benchmark, so most flood-rescue works use their own data. Model 1 is fine-tuned on flood **images**; tracking + memory are demonstrated on **video** (a short flood clip or aerial video), which we state clearly.
@@ -297,7 +297,7 @@ No paired flood datasets with thermal/sensors/GIS exist for training — so we u
 | Tracking | ByteTrack |
 | Segmentation | U-Net (flood severity) |
 | Frameworks/Libraries | PyTorch, OpenCV, NumPy |
-| Datasets | VisDrone, Roboflow flood, FloodNet |
+| Datasets | VisDrone, Flood C2A, FloodNet |
 | Platform | Google Colab / GPU-enabled workstation |
 | Version Control | Git / GitHub |
 
