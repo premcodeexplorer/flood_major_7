@@ -7,7 +7,8 @@ ultralytics>=8.3.0
 sahi>=0.11.20
 
 # --- Phase 4-5: tracking + memory ---
-lap>=0.4.0                 # ByteTrack association (Ultralytics bundles the tracker)
+lapx>=0.5.5                # ByteTrack association (Ultralytics bundles the tracker)
+pycocotools>=2.0.7         # COCO-protocol evaluation (eval_sahi.py)
 filterpy>=1.4.5
 
 # --- Phase 6: Model 2 (segmentation) ---

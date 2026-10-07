@@ -43,7 +43,7 @@ The system does not just detect — it goes from **perception all the way to a p
 - No existing flood-detection work combines detection + tracking + memory + flood-severity + prioritization. This integration is a genuine gap.
 
 **Feasibility:**
-- Built on proven, well-documented tools (YOLO, SAHI, ByteTrack, U-Net) and available datasets (VisDrone, Flood C2A, FloodNet) — so it is buildable within a student project.
+- Built on proven, well-documented tools (YOLO, ByteTrack, U-Net) and available datasets (VisDrone, Flood C2A, FloodNet) — so it is buildable within a student project.
 
 ---
 
@@ -61,7 +61,7 @@ To develop a drone-based system that detects, tracks, and remembers stranded flo
 
 ## 6. OBJECTIVES
 
-1. To build an aerial detector for stranded humans, vehicles, and animals, with special handling for tiny and partially-occluded targets using slicing-aided inference (SAHI).
+1. To build an aerial detector for stranded humans, vehicles, and animals that works on flood scenes, and to test whether slicing-aided inference (SAHI) improves detection of tiny targets (tested — not adopted, see §10).
 2. To adapt a general aerial detector to flood conditions via two-stage training (pre-training on VisDrone, then fine-tuning on flood-specific data).
 3. To track detected victims across frames and maintain a short-term memory of each victim's evolving state (time stranded, movement, trend).
 4. To integrate flood-severity segmentation so victims in more severely flooded areas are prioritized appropriately.
@@ -77,7 +77,7 @@ A single integrated pipeline of **two trained deep-learning models** and **three
 ```
 Drone Flood Footage
    │
-   ├──> MODEL 1: Victim Detection (YOLOv8 + SAHI)  [trained]
+   ├──> MODEL 1: Victim Detection (YOLOv8)         [trained]
    │         └──> Tracking (ByteTrack)              [logic]
    │                  └──> Short-Term Memory        [logic]
    │
@@ -115,7 +115,7 @@ Drone Flood Footage
 ### MODEL 1 — Victim Detector
 - **Type:** YOLOv8 (object detection)
 - **Job:** detect and locate people, vehicles, animals → bounding boxes with class labels
-- **Special technique:** SAHI (Slicing-Aided Hyper Inference) for tiny, far, occluded victims
+- **Small-object handling:** high input resolution (960 px) + flood fine-tuning with rehearsal. SAHI (tiled inference) was evaluated and **dropped** because it lowered accuracy on our flood test data (see §10).
 - **Trained on:** VisDrone (base) → fine-tuned on Flood C2A (aerial flood scenes, from the C2A dataset [3])
 - **Output:** boxes + classes + confidence per frame
 
@@ -135,7 +135,7 @@ Drone Flood Footage
 
 ## 10. HOW WE TRAIN THE TWO MODELS (TRAINING ARCHITECTURE)
 
-### MODEL 1 — Two-Stage Training + SAHI
+### MODEL 1 — Two-Stage Training (with rehearsal)
 
 **Why two stages:** VisDrone teaches the general skill of "detecting people/vehicles from drone height." Flood data teaches the specific skill of "recognizing victims against flood backgrounds (water, rooftops, debris)." Training on both (general → specific) generalizes better than either alone.
 
@@ -147,22 +147,35 @@ STAGE 1 — Base training on VisDrone
   - Train YOLOv8 → model learns general overhead object appearance
   - Output: base detector weights
 
-STAGE 2 — Fine-tuning on flood data (Flood C2A)
+STAGE 2 — Fine-tuning on flood data (Flood C2A) WITH REHEARSAL
   - Dataset: Flood C2A — flood subset of C2A [3] (aerial flood scenes, people labelled)
   - Convert to YOLO format; all labels -> person; vehicles pseudo-labelled by the Stage-1 model
-  - Continue training (fine-tune) the base detector on flood images
-  - Output: flood-adapted detector weights
-
-SMALL-OBJECT HANDLING (applied during inference + fine-tuning) — SAHI:
-  - Slice each large drone image into overlapping tiles
-  - Run the detector on each zoomed-in tile (tiny victims now appear larger)
-  - Merge tile detections back with overlap handling (NMS)
-  - Result: significantly more tiny / occluded victims detected
+  - Fine-tune on C2A + VisDrone train MIXED (~1 synthetic : 3 real images)
+    (C2A alone caused catastrophic forgetting: flood AP50 0.324 -> 0.222)
+  - Output: flood-adapted detector weights (models/flood_rehearsal.pt)
+  - Result: flood test AP50 0.324 -> 0.399 (+23 %), VisDrone val unchanged (0.699 -> 0.698)
 ```
+
+**SAHI (tiled inference) — evaluated, NOT adopted.**
+SAHI cuts an image into overlapping tiles, runs the detector on each zoomed-in tile and
+merges the boxes; it is designed for high-resolution (2K-4K) footage where people are only
+a few pixels tall. We tested it on the 109 real flood test photos (1,330 people, COCO
+protocol, `scripts/eval_sahi.py`):
+
+| Method | AP50 | AP50-95 | AP small | time / image |
+|---|---|---|---|---|
+| YOLO (adopted) | **0.404** | **0.178** | **0.152** | 1x |
+| YOLO + SAHI (320 px tiles) | 0.326 | 0.139 | 0.116 | ~5x slower |
+
+**Why it was dropped:** the test photos are only 640 px. The detector already up-samples
+them to 960 px; tiling enlarges each region ~3x more, so people become blurred and are cut
+at tile borders, and every image costs ~5x the compute. SAHI therefore lowered accuracy by
+8 AP50 points on our data. The pipeline uses standard detection; SAHI remains available as
+an option (`--sahi`) for genuinely high-resolution footage, where it is meant to help.
 
 **Training details / hyperparameters (typical, to be tuned):**
 - Framework: PyTorch + Ultralytics YOLOv8
-- Input resolution: high (e.g., 1280) to preserve small-object detail
+- Input resolution: 960 px (T4 GPU) to preserve small-object detail
 - Augmentation: mosaic, flips, scaling, HSV jitter
 - Optimizer: SGD/AdamW; learning-rate warmup then decay
 - Loss: YOLO box + class + objectness loss
@@ -201,7 +214,7 @@ INPUT: Drone flood footage (video / image frames)
         ├──────────────────────────────┐
         ▼                              ▼
 [MODULE 1] Victim Detection      [MODULE 4] Flood Severity
-   YOLOv8 + SAHI                    U-Net segmentation
+   YOLOv8                           U-Net segmentation
    (trained: VisDrone→flood)        (trained: FloodNet)
    → boxes: person/vehicle/animal   → water severity per region
         │                              │
@@ -232,7 +245,7 @@ OUTPUT:
 
 | Module | Type | Trained? | Tool |
 |---|---|---|---|
-| 1. Victim Detection | Deep-learning model | Yes | YOLOv8 + SAHI |
+| 1. Victim Detection | Deep-learning model | Yes | YOLOv8 |
 | 2. Tracking | Algorithm | No | ByteTrack |
 | 3. Short-Term Memory | Data structure | No | Custom logic |
 | 4. Flood Severity | Deep-learning model | Yes | U-Net |
@@ -243,7 +256,7 @@ OUTPUT:
 ## 12. HOW IT WORKS — STEP BY STEP (RUNTIME)
 
 1. **Input:** drone footage enters frame by frame.
-2. **Detect (Model 1 + SAHI):** find people/vehicles/animals; SAHI catches tiny/hidden ones.
+2. **Detect (Model 1):** find people/vehicles/animals in every frame.
 3. **Track (ByteTrack):** assign each victim a stable ID across frames → trajectories.
 4. **Group / cluster:** nearby victims are grouped into rescue units (e.g., "8 people on this rooftop").
 5. **Memory (Module 3):** for each victim/group, store recent history (time stranded, movement, whether water is rising — compared across frames).
@@ -293,7 +306,7 @@ No paired flood datasets with thermal/sensors/GIS exist for training — so we u
 | Category | Tools |
 |---|---|
 | Language | Python |
-| Detection | Ultralytics YOLOv8 + SAHI |
+| Detection | Ultralytics YOLOv8 (SAHI evaluated, not adopted) |
 | Tracking | ByteTrack |
 | Segmentation | U-Net (flood severity) |
 | Frameworks/Libraries | PyTorch, OpenCV, NumPy |
@@ -308,7 +321,7 @@ No paired flood datasets with thermal/sensors/GIS exist for training — so we u
 **Headline novelty:** First to combine **Detection + Tracking + Memory + Flood-Severity + Rescue Prioritization** in ONE flood system — from perception all the way to prioritized action. No existing flood-detection work does all of this together.
 
 **Supporting contributions:**
-1. **Tiny/occluded-victim detection** — SAHI + occlusion-aware fine-tuning catches the small, hidden victims standard detectors miss (the most rescue-critical case).
+1. **Flood adaptation without forgetting** — rehearsal fine-tuning (real VisDrone + synthetic flood data mixed) improves real-flood AP50 by 23 % while keeping VisDrone accuracy unchanged; fine-tuning on synthetic flood data alone made the detector worse.
 2. **Two-stage training** — VisDrone → flood fine-tuning, shown better than single-dataset training (proven via VisDrone-only vs fine-tuned comparison).
 3. **Memory-based risk reasoning** — uses each victim's changing situation over time, not just one frame.
 4. **Severity-aware prioritization** — fuses how flooded an area is into the rescue ranking; no prior work does this.
@@ -328,7 +341,7 @@ No paired flood datasets with thermal/sensors/GIS exist for training — so we u
 
 **Comparisons / ablations (6 planned):**
 1. VisDrone-only detector vs flood-fine-tuned detector (proves fine-tuning helps)
-2. Plain YOLO vs YOLO+SAHI (proves small-object handling helps)
+2. Plain YOLO vs YOLO+SAHI — done: SAHI lowered AP50 0.404 → 0.326 on 640 px flood photos, so it was not adopted (§10)
 3. Risk with vs without memory (ablation)
 4. Risk with vs without flood-severity (ablation)
 5. Capability comparison table vs closest prior work (RescueNet / Real-time / YOLO-flood)
@@ -341,7 +354,7 @@ No paired flood datasets with thermal/sensors/GIS exist for training — so we u
 ## 18. EXPECTED OUTCOMES & DELIVERABLES
 
 **Outcomes:**
-- A trained victim detector (person/vehicle/animal) with improved small-object detection over a plain-YOLO baseline.
+- A trained victim detector (person/vehicle) adapted to flood scenes (+23 % AP50 on real flood photos over the VisDrone-only baseline).
 - A flood-severity segmentation model estimating water extent per region.
 - An integrated pipeline: detect → track → memory → severity → priority.
 
@@ -373,7 +386,7 @@ No paired flood datasets with thermal/sensors/GIS exist for training — so we u
 |---|---|---|
 | Phase 1 — Literature review & requirements | Aug–Sep 2026 | Problem, datasets, baseline finalized |
 | Phase 2 — Design & methodology | Oct 2026 | Architecture & module design frozen |
-| Phase 3 — Detection + Tracking | Nov–Dec 2026 | Train YOLO+SAHI, fine-tune on flood, add ByteTrack |
+| Phase 3 — Detection + Tracking | Nov–Dec 2026 | Train YOLO, fine-tune on flood (rehearsal), evaluate SAHI, add ByteTrack |
 | Phase 4 — Memory + Severity | Jan 2027 | Short-term memory, FloodNet U-Net, risk scoring |
 | Phase 5 — Integration + Testing | Feb 2027 | Priority map, baseline & ablation results, metrics |
 | Phase 6 — Documentation | Mar 2027 | Final report, demo, presentation |
@@ -407,7 +420,7 @@ No paired flood datasets with thermal/sensors/GIS exist for training — so we u
 7. Aim & Objectives
 8. Proposed Solution / System Architecture (diagram)
 9. The Two Models (what they are)
-10. Training Architecture — Model 1 (two-stage + SAHI)
+10. Training Architecture — Model 1 (two-stage + rehearsal; SAHI tested and dropped)
 11. Training Architecture — Model 2 (U-Net on FloodNet)
 12. How It Works — step by step
 13. Datasets

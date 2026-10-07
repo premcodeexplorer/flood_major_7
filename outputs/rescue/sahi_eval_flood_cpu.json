@@ -1,0 +1,45 @@
+{
+  "weights": "E:\\Flood_major_7\\models\\flood_rehearsal.pt",
+  "imgsz": 960,
+  "conf": 0.01,
+  "overlap": 0.2,
+  "images": 109,
+  "gt_boxes": 1330,
+  "scorer": "pycocotools (COCO protocol), person only",
+  "results": [
+    {
+      "method": "YOLO",
+      "sec_per_image": 1.191,
+      "boxes": 11880,
+      "AP50-95": 0.1782,
+      "AP50": 0.4036,
+      "AP75": 0.1279,
+      "AP_small": 0.1522,
+      "AP_medium": 0.2563,
+      "AP_large": 0.1279,
+      "AR@10": 0.1353,
+      "AR@100": 0.3009,
+      "AR@300": 0.3351,
+      "AR_small": 0.3013,
+      "AR_medium": 0.414,
+      "AR_large": 0.3108
+    },
+    {
+      "method": "YOLO + SAHI (320px tiles)",
+      "sec_per_image": 5.925,
+      "boxes": 23153,
+      "AP50-95": 0.1392,
+      "AP50": 0.3262,
+      "AP75": 0.1017,
+      "AP_small": 0.1162,
+      "AP_medium": 0.2065,
+      "AP_large": 0.127,
+      "AR@10": 0.1114,
+      "AR@100": 0.2702,
+      "AR@300": 0.3061,
+      "AR_small": 0.2833,
+      "AR_medium": 0.365,
+      "AR_large": 0.2324
+    }
+  ]
+}
