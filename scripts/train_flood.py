@@ -7,7 +7,7 @@ Fine-tune, not retrain:
   * lr0 10x lower than Phase 1 (0.001 vs 0.01), short warmup, no bias-lr spike
   * same imgsz as Phase 1 for the GPU, so both models are scored at one resolution
 
-Comparison written to phase2_flood_metrics.json:
+Comparison written to phase2_flood_metrics.json (or <export-name>_metrics.json):
   * flood test (109 real photos, person only) - "does fine-tuning help?"
   * VisDrone val (optional, --visdrone-data) - "did it forget vehicles?"
 
@@ -97,7 +97,11 @@ def main():
     ap.add_argument("--finetuned", default=None,
                     help="with --val-only: fine-tuned weights (default <run>/weights/best.pt)")
     ap.add_argument("--export-to", default="models",
-                    help="dir to copy best.pt into as flood_finetuned.pt")
+                    help="dir to copy best.pt into as <export-name>.pt")
+    ap.add_argument("--export-name", default="flood_finetuned",
+                    help="file name for the exported weights and metrics (keeps runs apart)")
+    ap.add_argument("--close-mosaic", type=int, default=5,
+                    help="final epochs trained without mosaic")
     args = ap.parse_args()
 
     auto_imgsz, auto_batch = pick_preset()
@@ -142,7 +146,7 @@ def main():
                 patience=args.patience,
                 # --- augmentation: as Phase 1 ---
                 mosaic=1.0,
-                close_mosaic=5,
+                close_mosaic=args.close_mosaic,
                 scale=0.5,
                 translate=0.1,
                 fliplr=0.5,
@@ -187,7 +191,9 @@ def main():
                                                 report["visdrone_val"]["base"])
 
     print(json.dumps(report, indent=2))
-    out = run_dir / "phase2_flood_metrics.json"
+    metrics_name = ("phase2_flood_metrics.json" if args.export_name == "flood_finetuned"
+                    else f"{args.export_name}_metrics.json")
+    out = run_dir / metrics_name
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, indent=2))
     print(f"[compare] wrote {out}")
@@ -203,10 +209,10 @@ def main():
     if args.export_to:
         dest_dir = Path(args.export_to)
         dest_dir.mkdir(parents=True, exist_ok=True)
-        dest = dest_dir / "flood_finetuned.pt"
+        dest = dest_dir / f"{args.export_name}.pt"
         if not (dest.exists() and dest.samefile(best)):
             shutil.copy2(best, dest)
-        shutil.copy2(out, dest_dir / "phase2_flood_metrics.json")
+        shutil.copy2(out, dest_dir / metrics_name)
         print(f"[export] {dest}  <-- feed this to Phase 3")
 
 

@@ -1,0 +1,110 @@
+{
+  "base_weights": "/content/drive/MyDrive/FloodRescue/models/visdrone_base.pt",
+  "finetuned_weights": "/content/drive/MyDrive/FloodRescue/models/flood_finetuned.pt",
+  "imgsz": 960,
+  "batch": 12,
+  "flood_test": {
+    "base": {
+      "mAP50-95": 0.136,
+      "mAP50": 0.3244,
+      "mAP75": 0.0828,
+      "precision": 0.5813,
+      "recall": 0.3002,
+      "per_class_mAP50-95": {
+        "person": 0.136,
+        "vehicle": null,
+        "animal": null
+      },
+      "per_class_mAP50": {
+        "person": 0.3244
+      },
+      "classes_with_no_instances": [
+        "vehicle",
+        "animal"
+      ]
+    },
+    "finetuned": {
+      "mAP50-95": 0.096,
+      "mAP50": 0.2215,
+      "mAP75": 0.072,
+      "precision": 0.409,
+      "recall": 0.2581,
+      "per_class_mAP50-95": {
+        "person": 0.096,
+        "vehicle": null,
+        "animal": null
+      },
+      "per_class_mAP50": {
+        "person": 0.2215
+      },
+      "classes_with_no_instances": [
+        "vehicle",
+        "animal"
+      ]
+    },
+    "delta": {
+      "mAP50-95": -0.04,
+      "mAP50": -0.1029,
+      "mAP75": -0.0108,
+      "precision": -0.1723,
+      "recall": -0.0421,
+      "per_class_mAP50-95": {
+        "person": -0.04,
+        "vehicle": null,
+        "animal": null
+      }
+    }
+  },
+  "visdrone_val": {
+    "base": {
+      "mAP50-95": 0.3956,
+      "mAP50": 0.6991,
+      "mAP75": 0.3765,
+      "precision": 0.7942,
+      "recall": 0.63,
+      "per_class_mAP50-95": {
+        "person": 0.2605,
+        "vehicle": 0.5307,
+        "animal": null
+      },
+      "per_class_mAP50": {
+        "person": 0.5879,
+        "vehicle": 0.8102
+      },
+      "classes_with_no_instances": [
+        "animal"
+      ]
+    },
+    "finetuned": {
+      "mAP50-95": 0.2139,
+      "mAP50": 0.3715,
+      "mAP75": 0.2122,
+      "precision": 0.6004,
+      "recall": 0.3665,
+      "per_class_mAP50-95": {
+        "person": 0.0636,
+        "vehicle": 0.3643,
+        "animal": null
+      },
+      "per_class_mAP50": {
+        "person": 0.1862,
+        "vehicle": 0.5568
+      },
+      "classes_with_no_instances": [
+        "animal"
+      ]
+    },
+    "delta": {
+      "mAP50-95": -0.1817,
+      "mAP50": -0.3276,
+      "mAP75": -0.1643,
+      "precision": -0.1938,
+      "recall": -0.2635,
+      "per_class_mAP50-95": {
+        "person": -0.1969,
+        "vehicle": -0.1664,
+        "animal": null
+      }
+    }
+  }
+}

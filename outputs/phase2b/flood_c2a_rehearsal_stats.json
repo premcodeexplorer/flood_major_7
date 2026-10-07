@@ -1,0 +1,74 @@
+{
+  "copies_per_source": 1,
+  "seed": 0,
+  "train": {
+    "images_in_export": 20790,
+    "sources": 2079,
+    "images": 2079,
+    "images_with_no_objects": 0,
+    "boxes_kept": 63238,
+    "skipped_degenerate": 715,
+    "source_categories": {
+      "0": 63238
+    },
+    "per_class": {
+      "person": 63238,
+      "vehicle": 2731
+    },
+    "small_boxes_coco": 48592,
+    "medium_boxes_coco": 14559,
+    "large_boxes_coco": 87,
+    "pseudo_vehicle": {
+      "vehicle_boxes_added": 2731,
+      "images_with_vehicle": 921,
+      "dropped_overlapping_person": 160,
+      "conf": 0.5,
+      "imgsz": 960,
+      "weights": "/content/drive/MyDrive/FloodRescue/models/visdrone_base.pt"
+    }
+  },
+  "val": {
+    "images_in_export": 541,
+    "sources": 541,
+    "images": 541,
+    "images_with_no_objects": 0,
+    "boxes_kept": 18018,
+    "skipped_degenerate": 514,
+    "source_categories": {
+      "0": 17984,
+      "1": 34
+    },
+    "per_class": {
+      "person": 18018,
+      "vehicle": 1201
+    },
+    "small_boxes_coco": 15655,
+    "medium_boxes_coco": 2363,
+    "large_boxes_coco": 0,
+    "pseudo_vehicle": {
+      "vehicle_boxes_added": 1201,
+      "images_with_vehicle": 284,
+      "dropped_overlapping_person": 36,
+      "conf": 0.5,
+      "imgsz": 960,
+      "weights": "/content/drive/MyDrive/FloodRescue/models/visdrone_base.pt"
+    }
+  },
+  "test": {
+    "images_in_export": 109,
+    "sources": 108,
+    "images": 109,
+    "images_with_no_objects": 0,
+    "boxes_kept": 1329,
+    "skipped_degenerate": 1,
+    "source_categories": {
+      "0": 1329
+    },
+    "per_class": {
+      "person": 1329
+    },
+    "small_boxes_coco": 892,
+    "medium_boxes_coco": 400,
+    "large_boxes_coco": 37
+  }
+}
