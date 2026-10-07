@@ -1,0 +1,54 @@
+{
+  "run": "deeplabv3p_r50",
+  "config": {
+    "arch": "DeepLabV3Plus",
+    "encoder": "resnet50",
+    "attention": null,
+    "loss": "ce"
+  },
+  "seed": 0,
+  "hparams": {
+    "epochs": 80,
+    "batch": 8,
+    "crop": 512,
+    "lr": 0.0002,
+    "weight_decay": 0.0001
+  },
+  "frame": [
+    1024,
+    768
+  ],
+  "splits": {
+    "train": 1445,
+    "val": 450,
+    "test": 448
+  },
+  "best_epoch": 76,
+  "val_mIoU9": 75.4,
+  "test": {
+    "mIoU9": 73.44,
+    "mIoU10": 70.51,
+    "pixel_acc": 90.77,
+    "per_class_IoU": {
+      "background": 44.12,
+      "building-flooded": 73.6,
+      "building-non-flooded": 80.12,
+      "road-flooded": 63.46,
+      "road-non-flooded": 83.18,
+      "water": 75.68,
+      "tree": 81.39,
+      "vehicle": 53.54,
+      "pool": 61.28,
+      "grass": 88.69
+    }
+  },
+  "hard_class_mIoU": 62.97,
+  "params_M": 26.68,
+  "fps": 34.6,
+  "gpu": "Tesla T4",
+  "train_hours": 1.56,
+  "versions": {
+    "torch": "2.11.0+cu130",
+    "smp": "0.5.0"
+  }
+}

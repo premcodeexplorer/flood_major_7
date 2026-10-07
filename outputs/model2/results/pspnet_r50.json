@@ -1,0 +1,54 @@
+{
+  "run": "pspnet_r50",
+  "config": {
+    "arch": "PSPNet",
+    "encoder": "resnet50",
+    "attention": null,
+    "loss": "ce"
+  },
+  "seed": 0,
+  "hparams": {
+    "epochs": 80,
+    "batch": 8,
+    "crop": 512,
+    "lr": 0.0002,
+    "weight_decay": 0.0001
+  },
+  "frame": [
+    1024,
+    768
+  ],
+  "splits": {
+    "train": 1445,
+    "val": 450,
+    "test": 448
+  },
+  "best_epoch": 66,
+  "val_mIoU9": 71.12,
+  "test": {
+    "mIoU9": 69.57,
+    "mIoU10": 65.62,
+    "pixel_acc": 89.99,
+    "per_class_IoU": {
+      "background": 30.11,
+      "building-flooded": 69.99,
+      "building-non-flooded": 75.35,
+      "road-flooded": 57.91,
+      "road-non-flooded": 78.92,
+      "water": 74.88,
+      "tree": 81.89,
+      "vehicle": 43.6,
+      "pool": 55.47,
+      "grass": 88.1
+    }
+  },
+  "hard_class_mIoU": 56.74,
+  "params_M": 24.34,
+  "fps": 62.6,
+  "gpu": "Tesla T4",
+  "train_hours": 1.32,
+  "versions": {
+    "torch": "2.11.0+cu130",
+    "smp": "0.5.0"
+  }
+}
