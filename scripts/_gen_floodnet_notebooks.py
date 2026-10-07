@@ -1,7 +1,8 @@
 """Generates the three Model-2 (FloodNet segmentation) Colab notebooks.
 
   notebooks/Model2_FloodNet_1_Prep_Colab.ipynb   - run ONCE by one person
-  notebooks/Model2_FloodNet_2_Train_Teammate{1,2}_Colab.ipynb - 2 models each, 4 in total
+  notebooks/Model2_FloodNet_2_Train_Teammate{1,2,3}_Colab.ipynb - 2 models each, 6 in total
+    (teammate 3 = the two ablation runs)
 
 The scripts are embedded via %%writefile so scripts/*.py stay the single source
 of truth. Re-run after editing floodnet_prep.py or floodnet_train.py:
@@ -145,6 +146,7 @@ it is the class-imbalance table."""),
 TEAM = {
     1: ["unet_r50", "deeplabv3p_r50"],
     2: ["pspnet_r50", "unet_r50_scse_hybrid"],
+    3: ["unet_r50_scse", "unet_r50_hybrid"],
 }
 assert sorted(r for rs in TEAM.values() for r in rs) == sorted(RUNS), "every run assigned exactly once"
 DESC = {
@@ -152,6 +154,8 @@ DESC = {
     "deeplabv3p_r50": "DeepLabV3+, ResNet-50, cross-entropy - baseline from the FloodNet paper",
     "pspnet_r50": "PSPNet, ResNet-50, cross-entropy - the FloodNet paper's best model",
     "unet_r50_scse_hybrid": "**ours**: U-Net R50 + scSE attention + Dice/Focal loss",
+    "unet_r50_scse": "ablation: U-Net R50 + scSE attention, plain cross-entropy (attention only)",
+    "unet_r50_hybrid": "ablation: U-Net R50, Dice/Focal loss, no attention (loss only)",
 }
 
 
@@ -161,9 +165,9 @@ def train_cells(n, runs):
 md(f"""# Model 2 - FloodNet: Teammate {n} - train 2 models
 
 This notebook trains **{runs[0]}** and then **{runs[1]}**, one after the other.
-The other teammate's notebook trains the other 2 of the 4 models; together they
-fill the comparison table. Every model uses the same data, crop, schedule,
-epochs and seed - only the model/loss differs - so the 4 results are fair to compare.
+The other teammates' notebooks train the other models; together they fill the
+comparison and ablation tables. Every model uses the same data, crop, schedule,
+epochs and seed - only the model/loss differs - so all results are fair to compare.
 
 | # | model | what it is |
 |---|---|---|
@@ -181,7 +185,7 @@ code(f"""DATA_LINK = ''   # @param {{type:"string"}}
 # Leave empty if floodnet_1024.zip is already in your own MyDrive/FloodSeg/.
 
 RUNS = {json.dumps(runs)}   # fixed - do not change
-EPOCHS, SEED = 80, 0        # fixed - must match the other teammate"""),
+EPOCHS, SEED = 80, 0        # fixed - must match the other teammates"""),
 
 md("## 2. GPU + Drive"),
 code("""!nvidia-smi --query-gpu=name,memory.total --format=csv

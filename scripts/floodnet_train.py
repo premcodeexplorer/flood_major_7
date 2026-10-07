@@ -9,6 +9,8 @@ Runs (pick one with --run), all with a ResNet-50 encoder:
   baselines   unet_r50, deeplabv3p_r50, pspnet_r50                  (cross-entropy)
   ours        unet_r50_scse_hybrid = unet_r50 + scSE attention + Dice/Focal loss,
               so unet_r50 -> ours isolates exactly what our changes add
+  ablation    unet_r50_scse (attention only, CE), unet_r50_hybrid (loss only),
+              which split that gain between the two changes
 
 Metrics on the official TEST split, at 1024x768:
   * mIoU over the 9 non-background classes - the definition used by the
@@ -58,6 +60,9 @@ RUNS = {
     "pspnet_r50":           dict(arch="PSPNet", encoder="resnet50", attention=None, loss="ce"),
     # --- ours: unet_r50 + scSE attention + Dice/Focal --------------------------
     "unet_r50_scse_hybrid": dict(arch="Unet", encoder="resnet50", attention="scse", loss="hybrid"),
+    # --- ablation: one change at a time ----------------------------------------
+    "unet_r50_scse":        dict(arch="Unet", encoder="resnet50", attention="scse", loss="ce"),
+    "unet_r50_hybrid":      dict(arch="Unet", encoder="resnet50", attention=None, loss="hybrid"),
 }
 
 

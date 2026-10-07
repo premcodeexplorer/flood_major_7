@@ -5,7 +5,7 @@ Writes, next to the results folder:
   comparison.md   - paper-ready markdown table (published rows marked as context)
   comparison.csv  - same numbers, for Excel / LaTeX
   per_class.png   - per-class IoU bars, hard classes highlighted
-  ablation.md     - the one-change-at-a-time ladder
+  ablation.md     - each change vs plain U-Net (scSE only, loss only, both)
 
 Published rows are FloodNet Table 4 (Rahnemoonfar et al., IEEE Access 2021):
 9-class mIoU, 713x713 crops, PSPNet with ResNet-101, their own training setup.
@@ -36,9 +36,13 @@ PUBLISHED = {
 NAMES = {
     "unet_r50": "U-Net (R50)", "deeplabv3p_r50": "DeepLabV3+ (R50)", "pspnet_r50": "PSPNet (R50)",
     "unet_r50_scse_hybrid": "**Ours**: U-Net (R50) + scSE + Dice/Focal",
+    "unet_r50_scse": "U-Net (R50) + scSE (CE) [ablation]",
+    "unet_r50_hybrid": "U-Net (R50) + Dice/Focal [ablation]",
 }
-ORDER = ["unet_r50", "deeplabv3p_r50", "pspnet_r50", "unet_r50_scse_hybrid"]
-LADDER = [("unet_r50", "U-Net R50 (CE)"), ("unet_r50_scse_hybrid", "+ scSE + Dice/Focal (ours)")]
+ORDER = ["unet_r50", "deeplabv3p_r50", "pspnet_r50", "unet_r50_scse", "unet_r50_hybrid",
+         "unet_r50_scse_hybrid"]
+LADDER = [("unet_r50", "U-Net R50 (CE)"), ("unet_r50_scse", "+ scSE only (CE)"),
+          ("unet_r50_hybrid", "+ Dice/Focal only"), ("unet_r50_scse_hybrid", "+ scSE + Dice/Focal (ours)")]
 
 
 def fmt(v):

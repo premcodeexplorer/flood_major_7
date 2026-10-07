@@ -9,7 +9,7 @@ are fair to compare: one fixed split, one resolution and one schedule for every 
 | step | who | notebook | GPU? | time |
 |---|---|---|---|---|
 | 1. Download, verify and resize | **one person, once** | `Model2_FloodNet_1_Prep_Colab.ipynb` | no (CPU runtime) | ~30 min |
-| 2. Train 2 models each | teammate 1 / teammate 2 | `Model2_FloodNet_2_Train_Teammate1_Colab.ipynb` / `..._Teammate2_Colab.ipynb` | T4 | ~2–3 h per model |
+| 2. Train 2 models each | teammates 1 / 2 / 3 | `Model2_FloodNet_2_Train_Teammate{1,2,3}_Colab.ipynb` | T4 | ~2–3 h per model |
 | 3. Build the table | you, locally | `python scripts/floodnet_compare.py --results outputs/model2/results` | no | seconds |
 
 Notebook 1 leaves `MyDrive/FloodSeg/floodnet_1024.zip` (~1 GB). Share it as
@@ -18,12 +18,13 @@ After each model, teammates send back `results/<run>.json`, `history.json` and
 `test_predictions.jpg`. Collect them in `outputs/model2/results/` and
 `outputs/model2/runs/<run>/`.
 
-### Who trains what (4 models, 2 per teammate)
+### Who trains what (6 models, 2 per teammate)
 
 | notebook | model 1 | model 2 |
 |---|---|---|
 | Teammate 1 | `unet_r50` | `deeplabv3p_r50` |
 | Teammate 2 | `pspnet_r50` | `unet_r50_scse_hybrid` (ours) |
+| Teammate 3 | `unet_r50_scse` (ablation) | `unet_r50_hybrid` (ablation) |
 
 Each notebook trains its two models one after the other. If a session ends, re-running
 every cell skips the finished model and resumes the other from its last epoch.
@@ -33,10 +34,10 @@ every cell skips the finished model and resumes the other from its last epoch.
 | File | Role |
 |---|---|
 | `scripts/floodnet_prep.py` | Finds and pairs images and masks, validates them, resizes to 1024×768 once, writes class-frequency stats |
-| `scripts/floodnet_train.py` | The 4 runs, training with per-epoch checkpoint and resume, test evaluation, params and FPS, results JSON |
+| `scripts/floodnet_train.py` | The 6 runs, training with per-epoch checkpoint and resume, test evaluation, params and FPS, results JSON |
 | `scripts/floodnet_compare.py` | Paper table, ablation table, per-class bar chart |
-| `scripts/_gen_floodnet_notebooks.py` | Rebuilds the 3 notebooks from the scripts (the teammate split is `TEAM` there) |
-| `scripts/_test_floodnet.py` | End-to-end smoke test on synthetic data: all 4 runs, resume, guards, compare |
+| `scripts/_gen_floodnet_notebooks.py` | Rebuilds the 4 notebooks from the scripts (the teammate split is `TEAM` there) |
+| `scripts/_test_floodnet.py` | End-to-end smoke test on synthetic data: all runs, resume, guards, compare |
 
 The notebooks are **generated**. Edit the `.py` files, then:
 
@@ -81,12 +82,13 @@ EarthVision 2021 challenge release, which is semi-supervised with only ~400 labe
 | `deeplabv3p_r50` | DeepLabV3+, ResNet-50 | CE | baseline (also in the FloodNet paper) |
 | `pspnet_r50` | PSPNet, ResNet-50 | CE | baseline (the FloodNet paper's best) |
 | `unet_r50_scse_hybrid` | U-Net, ResNet-50 + scSE attention | Dice + Focal | **ours** |
+| `unet_r50_scse` | U-Net, ResNet-50 + scSE attention | CE | ablation: attention only |
+| `unet_r50_hybrid` | U-Net, ResNet-50 | Dice + Focal | ablation: loss only |
 
-All four share the ResNet-50 encoder, so the differences come from the decoder,
-the attention and the loss, not from a bigger backbone. `unet_r50` → ours is the
-ablation: it isolates what our two changes add **together**. Separating attention
-from loss would need two more runs (U-Net + scSE with CE, U-Net with Dice/Focal),
-so add them later if a reviewer asks. scSE is concurrent spatial and channel
+All six share the ResNet-50 encoder, so the differences come from the decoder,
+the attention and the loss, not from a bigger backbone. `unet_r50` → ours shows
+what our two changes add **together**; the two ablation runs (Teammate 3) show
+what scSE alone and Dice/Focal alone add, so `ablation.md` splits the gain. scSE is concurrent spatial and channel
 squeeze-and-excitation (Roy et al., MICCAI 2018) on every U-Net decoder block.
 
 ## Metrics
