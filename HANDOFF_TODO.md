@@ -11,7 +11,7 @@ and updating the slides. Do the steps in order; step 1 blocks almost everything 
 | Where | What |
 |---|---|
 | **GitHub repo** (this folder) | All code, notebooks, docs, figures, result tables |
-| **Google Drive folder `FloodRescue/`** (shared separately) | The trained weights + test data. They are too big for GitHub (Model 2 = 135 MB, limit 100 MB) |
+| **Google Drive folder `FloodRescue/`** (shared separately; built from `SEND_VIA_DRIVE/` on Prem's PC) | The trained weights + test data. They are too big for GitHub (Model 2 = 135 MB, limit 100 MB) |
 
 Drive folder contents (the Colab notebook expects exactly this layout in **My Drive**):
 ```
@@ -19,6 +19,7 @@ My Drive/FloodRescue/models/flood_rehearsal.pt            (Model 1, 22 MB)
 My Drive/FloodRescue/models/flood_severity_unet_scse.pt   (Model 2, 135 MB)
 My Drive/FloodRescue/data/flood_c2a_coco.zip              (flood test photos)
 My Drive/FloodRescue/videos/SOURCES.txt                   (clip sources, fill in)
+My Drive/FloodRescue/extras/simulated_video.mp4           (fallback demo, label as "simulated")
 ```
 If it shows up under **"Shared with me"**, right-click it, then **Organize > Add shortcut > My Drive**,
 so it appears as `My Drive/FloodRescue`. If the notebook still can't find it, download the

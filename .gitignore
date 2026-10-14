@@ -27,3 +27,6 @@ floodseg teammate 1/
 model2_teammates file/
 FloodSeg/
 handoff_colab/
+
+# big files sent via Google Drive, not GitHub
+SEND_VIA_DRIVE/
