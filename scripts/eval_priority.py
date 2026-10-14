@@ -102,11 +102,12 @@ def rank_top(groups, variant):
 def score(args):
     out = Path(args.out)
     groups = json.loads((out / "groups.json").read_text())
-    rows = list(csv.DictReader(open(out / "labels.csv")))
+    # utf-8-sig: Excel's "CSV UTF-8" adds a BOM; skip blank rows Excel leaves at the end
+    rows = [r for r in csv.DictReader(open(out / "labels.csv", encoding="utf-8-sig")) if r.get("photo")]
     raters = [c for c in rows[0] if c.startswith("rater")]
     used, hits, chance, pair_agree, pairs, no_people = 0, Counter(), 0.0, 0, 0, 0
     for r in rows:
-        votes = [int(r[c]) for c in raters if r[c].strip()]
+        votes = [int(float(r[c])) for c in raters if (r[c] or "").strip()]
         if not votes:
             continue
         top, n = Counter(votes).most_common(1)[0]
