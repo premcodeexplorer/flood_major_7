@@ -18,6 +18,13 @@ Metrics on the official TEST split, at 1024x768:
   * mIoU over all 10 classes, pixel accuracy, per-class IoU
   * parameters and FPS (batch 1, 1024x768, fp16) on the GPU that ran it
 
+Tuning (after the comparison): --tag names a variant of a run so its files
+don't collide with the original, e.g.
+    --run unet_r50_scse_hybrid --tag ep120 --epochs 120
+--tta scores with 8-way flip/rot90 test-time augmentation; with --eval-only
+it re-scores an existing best.pt without retraining (result: <tag>_tta.json).
+Pick variants by VAL mIoU, never by test.
+
 Checkpoints go to <out>/runs/<run>/ every epoch; re-running the same command
 resumes automatically. When finished, <out>/results/<run>.json holds
 everything the comparison table needs.
@@ -107,17 +114,18 @@ def build_model(cfg, weights="imagenet"):
 
 class Hybrid(nn.Module):
     """Dice (region overlap, insensitive to class frequency) + Focal (hard pixels)."""
-    def __init__(self):
+    def __init__(self, dice_w=1.0, focal_w=1.0):
         super().__init__()
         self.dice = smp.losses.DiceLoss("multiclass", from_logits=True)
         self.focal = smp.losses.FocalLoss("multiclass")
+        self.dice_w, self.focal_w = dice_w, focal_w
 
     def forward(self, logits, y):
-        return self.dice(logits, y) + self.focal(logits, y)
+        return self.dice_w * self.dice(logits, y) + self.focal_w * self.focal(logits, y)
 
 
-def build_loss(name):
-    return nn.CrossEntropyLoss() if name == "ce" else Hybrid()
+def build_loss(name, dice_w=1.0, focal_w=1.0):
+    return nn.CrossEntropyLoss() if name == "ce" else Hybrid(dice_w, focal_w)
 
 
 def forward(model, x):
@@ -127,15 +135,28 @@ def forward(model, x):
     return out
 
 
+def predict_tta(model, x):
+    """Mean softmax over the 8 flips/rot90s - the same symmetries used in training."""
+    prob = 0
+    for k in range(4):
+        for flip in (False, True):
+            xi = torch.rot90(x, k, (2, 3))
+            xi = xi.flip(3) if flip else xi
+            p = forward(model, xi).float().softmax(1)
+            p = p.flip(3) if flip else p
+            prob = prob + torch.rot90(p, -k, (2, 3))
+    return prob
+
+
 # ----------------------------------------------------------------------------- metrics
 @torch.no_grad()
-def confusion(model, loader, device):
+def confusion(model, loader, device, tta=False):
     model.eval()
     cm = torch.zeros(NC, NC, dtype=torch.int64, device=device)
     for x, y in loader:
         x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
         with torch.autocast(device.type, enabled=device.type == "cuda"):
-            pred = forward(model, x).argmax(1)
+            pred = (predict_tta(model, x) if tta else forward(model, x)).argmax(1)
         cm += torch.bincount(y.view(-1) * NC + pred.view(-1), minlength=NC * NC).view(NC, NC)
     return cm.cpu().numpy()
 
@@ -205,15 +226,19 @@ def main():
     ap.add_argument("--val-every", type=int, default=2)
     ap.add_argument("--workers", type=int, default=2)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--dice-w", type=float, default=1.0, help="hybrid loss: Dice weight")
+    ap.add_argument("--focal-w", type=float, default=1.0, help="hybrid loss: Focal weight")
+    ap.add_argument("--tag", default="", help="name for a tuning variant, e.g. ep120")
+    ap.add_argument("--tta", action="store_true", help="8-way flip/rot90 test-time augmentation")
     ap.add_argument("--eval-only", action="store_true", help="skip training, re-evaluate best.pt")
     ap.add_argument("--max-steps", type=int, default=0, help="debug: stop each epoch after N steps")
     ap.add_argument("--no-pretrained", action="store_true", help="debug: skip ImageNet weights download")
     args = ap.parse_args()
 
     cfg = RUNS[args.run]
-    tag = args.run if args.seed == 0 else f"{args.run}_seed{args.seed}"
+    tag = args.run + (f"_{args.tag}" if args.tag else "") + (f"_seed{args.seed}" if args.seed else "")
     run_dir = Path(args.out) / "runs" / tag
-    res_path = Path(args.out) / "results" / f"{tag}.json"
+    res_path = Path(args.out) / "results" / f"{tag}{'_tta' if args.tta else ''}.json"
     run_dir.mkdir(parents=True, exist_ok=True)
     res_path.parent.mkdir(parents=True, exist_ok=True)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -240,7 +265,7 @@ def main():
 
     model = build_model(cfg, None if args.no_pretrained else "imagenet").to(device)
     params_m = round(sum(p.numel() for p in model.parameters()) / 1e6, 2)
-    loss_fn = build_loss(cfg["loss"])
+    loss_fn = build_loss(cfg["loss"], args.dice_w, args.focal_w)
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     steps_per_epoch = len(train_dl) if not args.max_steps else min(args.max_steps, len(train_dl))
     total, warm = args.epochs * steps_per_epoch, steps_per_epoch
@@ -297,20 +322,24 @@ def main():
     ck = torch.load(best_p, map_location=device, weights_only=False)
     model.load_state_dict(ck["model"])
     print(f"[test] best.pt from epoch {ck['epoch'] + 1} (val mIoU9 {ck['val_mIoU9']:.2f})")
-    test = scores(confusion(model, test_dl, device))
+    test = scores(confusion(model, test_dl, device, args.tta))
+    val_tta = scores(confusion(model, val_dl, device, True))["mIoU9"] if args.tta else None
     if not history and last.exists():
         history = torch.load(last, map_location="cpu", weights_only=False)["history"]
         train_time = torch.load(last, map_location="cpu", weights_only=False)["train_time"]
 
     result = {
-        "run": tag, "config": cfg, "seed": args.seed,
-        "hparams": {k: getattr(args, k) for k in ("epochs", "batch", "crop", "lr", "weight_decay")},
+        "run": tag + ("_tta" if args.tta else ""), "config": cfg, "seed": args.seed,
+        "hparams": {k: getattr(args, k) for k in ("epochs", "batch", "crop", "lr", "weight_decay",
+                                                  "dice_w", "focal_w")},
+        "tta": args.tta, "val_mIoU9_tta": val_tta,
         "frame": [W, H], "splits": {"train": len(train_ds), "val": len(val_ds), "test": len(test_ds)},
         "best_epoch": ck["epoch"] + 1, "val_mIoU9": ck["val_mIoU9"],
         "test": test,
         "hard_class_mIoU": round(float(np.mean([test["per_class_IoU"][c] for c in HARD
                                                  if test["per_class_IoU"][c] is not None])), 2),
-        "params_M": params_m, "fps": measure_fps(model, device, H, W), "gpu": gpu,
+        "params_M": params_m, "gpu": gpu,
+        "fps": measure_fps(model, device, H, W),    # single pass; TTA costs 8x this
         "train_hours": round(train_time / 3600, 2),
         "versions": {"torch": torch.__version__, "smp": smp.__version__},
     }

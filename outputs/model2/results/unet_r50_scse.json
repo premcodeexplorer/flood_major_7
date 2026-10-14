@@ -1,0 +1,54 @@
+{
+  "run": "unet_r50_scse",
+  "config": {
+    "arch": "Unet",
+    "encoder": "resnet50",
+    "attention": "scse",
+    "loss": "ce"
+  },
+  "seed": 0,
+  "hparams": {
+    "epochs": 80,
+    "batch": 8,
+    "crop": 512,
+    "lr": 0.0002,
+    "weight_decay": 0.0001
+  },
+  "frame": [
+    1024,
+    768
+  ],
+  "splits": {
+    "train": 1445,
+    "val": 450,
+    "test": 448
+  },
+  "best_epoch": 76,
+  "val_mIoU9": 75.95,
+  "test": {
+    "mIoU9": 73.03,
+    "mIoU10": 69.17,
+    "pixel_acc": 90.35,
+    "per_class_IoU": {
+      "background": 34.38,
+      "building-flooded": 73.15,
+      "building-non-flooded": 79.8,
+      "road-flooded": 62.02,
+      "road-non-flooded": 82.53,
+      "water": 77.17,
+      "tree": 80.3,
+      "vehicle": 51.3,
+      "pool": 62.93,
+      "grass": 88.07
+    }
+  },
+  "hard_class_mIoU": 62.35,
+  "params_M": 33.82,
+  "fps": 17.9,
+  "gpu": "Tesla T4",
+  "train_hours": 2.27,
+  "versions": {
+    "torch": "2.11.0+cu130",
+    "smp": "0.5.0"
+  }
+}

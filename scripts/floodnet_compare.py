@@ -18,6 +18,7 @@ Usage:
 import argparse
 import csv
 import json
+import sys
 from pathlib import Path
 
 CLASSES = ["building-flooded", "building-non-flooded", "road-flooded", "road-non-flooded",
@@ -50,6 +51,7 @@ def fmt(v):
 
 
 def main():
+    sys.stdout.reconfigure(encoding="utf-8")      # tables contain "Δ"; Windows consoles default to cp1252
     ap = argparse.ArgumentParser()
     ap.add_argument("--results", required=True)
     args = ap.parse_args()

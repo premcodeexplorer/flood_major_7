@@ -25,3 +25,5 @@ FloodRescue/
 # raw teammate Drive downloads (copied into outputs/model2/)
 floodseg teammate 1/
 model2_teammates file/
+FloodSeg/
+handoff_colab/
